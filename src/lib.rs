@@ -244,9 +244,9 @@
 #![no_std]
 #![doc(html_root_url = "https://docs.rs/unicode-ident/1.0.22")]
 #![allow(
-    clippy::doc_markdown,
-    clippy::must_use_candidate,
-    clippy::unreadable_literal
+    clippy::doc_markdown, // Unicode spec references in doc comments
+    clippy::must_use_candidate, // Pure lookup functions, caller decides whether to use result
+    clippy::unreadable_literal // Bitmask constants are clearer without underscores
 )]
 
 #[rustfmt::skip]
@@ -264,6 +264,8 @@ pub fn is_xid_start(ch: char) -> bool {
     }
     let chunk = *TRIE_START.0.get(ch as usize / 8 / CHUNK).unwrap_or(&ZERO);
     let offset = chunk as usize * CHUNK / 2 + ch as usize / 8 % CHUNK;
+    // SAFETY: offset is bounded by the trie structure: chunk comes from TRIE_START
+    // (or ZERO fallback) and CHUNK ensures offset stays within LEAF bounds.
     unsafe { LEAF.0.get_unchecked(offset) }.wrapping_shr(ch as u32 % 8) & 1 != 0
 }
 
@@ -277,5 +279,7 @@ pub fn is_xid_continue(ch: char) -> bool {
         .get(ch as usize / 8 / CHUNK)
         .unwrap_or(&ZERO);
     let offset = chunk as usize * CHUNK / 2 + ch as usize / 8 % CHUNK;
+    // SAFETY: offset is bounded by the trie structure: chunk comes from TRIE_CONTINUE
+    // (or ZERO fallback) and CHUNK ensures offset stays within LEAF bounds.
     unsafe { LEAF.0.get_unchecked(offset) }.wrapping_shr(ch as u32 % 8) & 1 != 0
 }
